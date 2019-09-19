@@ -1,0 +1,5 @@
+﻿  Circuit_PainterView.cpp
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(117): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(207): warning C4390: “;”: 找到空的受控语句；这是否是有意的?
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(258): warning C4018: “<”: 有符号/无符号不匹配
+  Circuit_Painter.vcxproj -> C:\Users\14117\source\repos\Circuit_Painter\Debug\Circuit_Painter.exe
