@@ -1,5 +1,23 @@
 ﻿  Circuit_PainterView.cpp
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(117): warning C4018: “<”: 有符号/无符号不匹配
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(207): warning C4390: “;”: 找到空的受控语句；这是否是有意的?
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(258): warning C4018: “<”: 有符号/无符号不匹配
-  Circuit_Painter.vcxproj -> C:\Users\14117\source\repos\Circuit_Painter\Debug\Circuit_Painter.exe
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(137): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(286): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(422): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(423): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(226): warning C4101: “res”: 未引用的局部变量
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(509): warning C4018: “<”: 有符号/无符号不匹配
+D:\software\Visual Studio 2019\VC\Tools\MSVC\14.20.27508\include\thread(39): error C2672: “std::invoke”: 未找到匹配的重载函数
+  D:\software\Visual Studio 2019\VC\Tools\MSVC\14.20.27508\include\thread(47): note: 参见对正在编译的函数 模板 实例化“unsigned int std::thread::_Invoke<_Tuple,0>(void *) noexcept”的引用
+          with
+          [
+              _Tuple=_Tuple
+          ]
+  D:\software\Visual Studio 2019\VC\Tools\MSVC\14.20.27508\include\thread(55): note: 参见对正在编译的函数 模板 实例化“unsigned int (__stdcall *std::thread::_Get_invoke<_Tuple,0>(std::integer_sequence<unsigned int,0>) noexcept)(void *)”的引用
+  C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(85): note: 参见对正在编译的函数 模板 实例化“std::thread::thread<void(__thiscall CCircuitPainterView::* )(void),,void>(_Fn &&)”的引用
+          with
+          [
+              _Fn=void (__thiscall CCircuitPainterView::* )(void)
+          ]
+D:\software\Visual Studio 2019\VC\Tools\MSVC\14.20.27508\include\thread(39): error C2893: 未能使函数模板“unknown-type std::invoke(_Callable &&,_Types &&...) noexcept(<expr>)”专用化
+  D:\software\Visual Studio 2019\VC\Tools\MSVC\14.20.27508\include\thread(39): note: 用下列模板参数:
+  D:\software\Visual Studio 2019\VC\Tools\MSVC\14.20.27508\include\thread(39): note: “_Callable=void (__thiscall CCircuitPainterView::* )(void)”
+  D:\software\Visual Studio 2019\VC\Tools\MSVC\14.20.27508\include\thread(39): note: “_Types={}”

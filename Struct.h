@@ -2,6 +2,7 @@
 
 #include<vector>
 #include<set>
+#include<map>
 using namespace std;
 
 #define TYPE_NULL 0
@@ -10,7 +11,8 @@ using namespace std;
 #define TYPE_CUR 3
 #define TYPE_VOL 4
 #define TYPE_SLD 5
-#define TYPE_WIRE 6
+#define TYPE_LGT 6
+#define TYPE_WIRE 7
 
 enum NodeType { NODE, SRC, ELEM, SLD };
 
@@ -64,15 +66,15 @@ class Part
 public:
 	int type;
 	vector<Stroke*> strokes;
-	set<pair<Part*, int>> temp_pin;
+	map <pair<Part*, int>, Dot > temp_pin;
 	union
 	{
 		ElemNode* elem_node[2];
 		int ports[2];
 		SrcNode* src_node[2];
 	};
+	vector<Dot> pin_point;
 	Part();
-	Part* cut(Dot cut_point,int id);
 };
 
 class Graph

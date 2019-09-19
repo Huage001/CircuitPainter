@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <sstream>
 #include <cmath>
+#include <thread>
 using namespace std;
 
 #ifdef _DEBUG
@@ -80,6 +81,8 @@ CCircuitPainterView::CCircuitPainterView() noexcept
 		key_point_table[i] = new pair<Part*,int> [iScrHeight]();
 		all_point_table[i] = new pair<Part*,Dot>  [iScrHeight]();
 	}
+
+	thread t(&CCircuitPainterView::classification);
 }
 
 CCircuitPainterView::~CCircuitPainterView()
@@ -215,38 +218,41 @@ bool CCircuitPainterView::SameArea(Dot a, Dot b)
 //TODO：分类线程
 void CCircuitPainterView::classification()
 {
-	while(1)
+	while (1)
 	{
 		while (recognize_queue.empty());	//while(工作队列为空);
 		Part* target = recognize_queue.front();	//取队首part
 		recognize_queue.pop();	//出队
 		int res;
-		while(1)
+		while (1)
 		{
-			bool stop=false;
-			while(mouseDown);
+			bool stop = false;
+			while (mouseDown);
 			double timer = clock();
-			while(1)
+			while (1)
 			{
-				if(mouseDown)
+				if (mouseDown)
 					break;
-				if((clock()-timer)/CLOCKS_PER_SEC<MAX_TIMEVAL)
+				if ((clock() - timer) / CLOCKS_PER_SEC < MAX_TIMEVAL)
 					continue;
 				else
 				{
 					//TODO: 开启tensorflow识别	target->type=tensorflow();	
-					stop=true;
+					stop = true;
 					break;
 				}
 			}
-			if(stop)
+			if (stop)
 				break;
 		}
 		CDC* pDC = GetDC();
 		CCircuitPainterDoc* pDoc = GetDocument();
 		if (target->type == TYPE_WIRE)//如果返回的是导线，
 		{
+			//其实都不用这么麻烦，下一步改进时可以考虑多种等价情况，把导线中间点也结合到端点上
 			Dot start_end[2];
+			pair<int, int> unknown[2];
+			unknown[0].first = unknown[1].first = unknown[0].second = unknown[1].second = -1;//待定的关键节点，初始为未确定状态
 			start_end[0] = target->strokes[0]->dots[0];
 			start_end[1] = target->strokes.back()->dots.back();
 			for (int index = 0; index < 2; index++)
@@ -263,57 +269,81 @@ void CCircuitPainterView::classification()
 								for (int k = start_end[index].second - RADIUS; k <= start_end[index].second + RADIUS; k++)
 									if (j >= 0 && j < iScrWidth && k >= 0 && k < iScrHeight)
 									{
-										key_point_table[j][k] = make_pair(part, cur_code);
+										key_point_table[j][k] = make_pair(target, cur_code);
 										pDC->SetPixel(j, k, RGB(255, 0, 0));
 									}
-							key_point.push_back(start_end[index]);
-							//将原导线拆成两半，更新信息，注意此时要同步更新原导线的part
-							Dot cut_point = all_point_table[start_end[index].first][start_end[index].second].second;
-							Part* new_part = connect->cut(cut_point, cur_code);
-							pDoc->graph->all_parts.push_back(new_part);
-							//这部分处理原导线端口和新导线端口的对应关系，需要好好理解
-							Dot port0 = key_point[connect->ports[0]], port1 = key_point[connect->ports[1]];
-							Dot start = key_point[key_point_table[connect->strokes[0]->dots[0].first][connect->strokes[0]->dots[0].second].second], end = key_point[key_point_table[new_part->strokes.back()->dots.back().first][new_part->strokes.back()->dots.back().second].second];
-							if (SameArea(port0, start) && SameArea(port1, end))
+							//处理新关键点
+							Node* new_node = new Node(cur_code);
+							new_node->m_type = NODE;
+							new_node->num_of_neigh = 3;
+							new_node->m_neighbors.push_back(connect->ports[0]);
+							new_node->m_neighbors.push_back(connect->ports[1]);
+							new_node->m_neighbors.push_back(-1);//在target上的节点处于待定状态
+							//原导线的连接关系要变
+							for (int j = 0; j < 2; j++)
 							{
-								new_part->ports[0] = cur_code;
-								new_part->ports[1] = connect->ports[1];
-								connect->ports[1] = cur_code;
+								Node* port_node = key_points[connect->ports[j]];
+								for (int k = 0; k < port_node->m_neighbors.size(); k++)
+									if (port_node->m_neighbors[k] == connect->ports[!j])
+									{
+										port_node->m_neighbors[k] = cur_code;
+										break;
+									}
 							}
-							else if (SameArea(port1, start) && SameArea(port0, end))
-							{
-								new_part->ports[0] = cur_code;
-								new_part->ports[1] = connect->ports[0];
-								connect->ports[0] = cur_code;
-							}
+							unknown[index].first = cur_code;
+							unknown[!index].second = cur_code;//此时这个点可能成为另一个端点的邻居，因此将它送入另一个端点的待定区
+							cur_code++;
+							key_points.push_back(new_node);
+						}
+						else//说明和这条线的某个关键节点对上了
+						{
+							int interface_id = key_point_table[start_end[index].first][start_end[index].second].second;//和哪个关键节点对上了
+							key_points[interface_id]->num_of_neigh++;
+							key_points[interface_id]->m_neighbors.push_back(-1);//同理具体和哪个点连着待定
+							unknown[index].first = interface_id;
+							unknown[!index].second = interface_id;//同理，送入另一个端点的待定区
+							if (target->ports[0] == -1)
+								target->ports[0] = interface_id;
+							else if (target->ports[1] == -1)
+								target->ports[1] = interface_id;
+							else
+								assert(0);
+						}
+					}
+					else//否则（对方不是导线）
+					{
+						if ((connect->type == TYPE_RES && connect->elem_node[0]->num_of_neigh > 3) || (connect->type != TYPE_RES && connect->elem_node[0]->num_of_neigh > 2))//如果对方的引脚满了，
+							assert(0);
+						else//否则，加入该引脚，更新对方的引脚信息和这条导线的信息
+						{
+							//新增关键点将它的相邻区域点加入到关键点表
+							for (int j = start_end[index].first - RADIUS; j <= start_end[index].first + RADIUS; j++)
+								for (int k = start_end[index].second - RADIUS; k <= start_end[index].second + RADIUS; k++)
+									if (j >= 0 && j < iScrWidth && k >= 0 && k < iScrHeight)
+									{
+										key_point_table[j][k] = make_pair(connect, cur_code);
+										pDC->SetPixel(j, k, RGB(255, 0, 0));
+									}
+							//处理新关键点
+							Node* new_node = new Node(cur_code);
+							new_node->m_type = NODE;
+							new_node->num_of_neigh = 2;
+							new_node->m_neighbors.push_back(connect->elem_node[0]->m_id);//TODO：想想变阻器该咋办
+							new_node->m_neighbors.push_back(-1);
+							unknown[index].first = cur_code;
+							unknown[!index].second = cur_code;
+							connect->elem_node[0]->m_neighbors.push_back(cur_code);
+							connect->elem_node[0]->num_of_neigh++;
+							connect->pin_point.push_back(start_end[index]);
+							if (target->ports[0] == -1)
+								target->ports[0] = cur_code;
+							else if (target->ports[1] == -1)
+								target->ports[1] = cur_code;
 							else
 								assert(0);
 							cur_code++;
-							//重绘新分出来的导线
-							for (int s = 0; s < new_part->strokes.size(); s++)
-								for (int i = 0; i < new_part->strokes[s]->dots.size(); i++)
-									for (int j = new_part->strokes[s]->dots[i].first - RADIUS; j <= new_part->strokes[s]->dots[i].first + RADIUS; j++)
-										for (int k = new_part->strokes[s]->dots[i].second - RADIUS; k <= new_part->strokes[s]->dots[i].second + RADIUS; k++)
-											if (j >= 0 && j < iScrWidth && k >= 0 && k < iScrHeight)
-											{
-												all_point_table[j][k] = make_pair(new_part, stroke->dots[i]);
-												pDC->SetPixel(j, k, RGB(0, 0, 255));
-											}
-							int old_code = key_point_table[new_part->strokes.back()->dots.back().first][new_part->strokes.back()->dots.back().second].second;
-							for (int j = new_part->strokes.back()->dots.back().first - RADIUS; j <= new_part->strokes.back()->dots.back().first + RADIUS; j++)
-								for (int k = new_part->strokes.back()->dots.back().second - RADIUS; k <= new_part->strokes.back()->dots.back().second + RADIUS; k++)
-									if (j >= 0 && j < iScrWidth && k >= 0 && k < iScrHeight)
-									{
-										key_point_table[j][k] = make_pair(new_part, old_code);
-										pDC->SetPixel(j, k, RGB(255, 0, 0));
-									}
 						}
 					}
-					//否则（对方不是导线）
-						//如果对方的引脚满了，
-							//报错，
-						//否则，
-							//加入该引脚，更新对方的引脚信息和这条导线的信息
 				}
 				else//否则（没找到对应Part）
 				{
@@ -325,21 +355,71 @@ void CCircuitPainterView::classification()
 								key_point_table[j][k] = make_pair(part, cur_code);
 								pDC->SetPixel(j, k, RGB(255, 0, 0));
 							}
-					key_point.push_back(start_end[index]);
+					Node* new_node = new Node(cur_code);
+					new_node->m_type = NODE;
+					new_node->num_of_neigh = 1;
+					new_node->m_neighbors.push_back(-1);
+					unknown[index].first = cur_code;
+					unknown[!index].second = cur_code;
+					key_points.push_back(new_node);
 					cur_code++;
 				}
 			}
+			//处理临时节点空间
+			int middle_pin = -1;
+			for (map<pair<Part*, int>,Dot>::iterator it = target->temp_pin.begin(); it != target->temp_pin.end(); it++)
+			{
+				if (it->first.second == key_point_table[start_end[0].first][start_end[0].second].second || it->first.second == key_point_table[start_end[1].first][start_end[1].second].second)
+					continue;//说明关键点就是起点和终点，已经在上面处理过这种情况了，之后的情况都需要拆导线
+				if (middle_pin == -1)
+				{
+					middle_pin = it->first.second;//这个节点抢占了导线中间节点的山头
+					unknown[0].second = unknown[1].second = middle_pin;//这个时候都已经确定有中间节点了
+				}
+				key_points[it->first.second]->num_of_neigh += 2;//该关键点的邻接节点要加入这条导线上的两个端点
+				key_points[it->first.second]->m_neighbors.push_back(unknown[0].first);
+				key_points[it->first.second]->m_neighbors.push_back(unknown[1].first);
+			}
+			target->temp_pin.clear();
+			key_points[unknown[0].first]->m_neighbors.back() = unknown[0].second;
+			key_points[unknown[1].first]->m_neighbors.back() = unknown[1].second;
 		}
-		//处理该元件的临时节点空间，
-		//如果返回的是导线
-			//将原导线拆成两半，注意此时要同步更新原导线的part、stroke并重绘
-		//否则
-			//如果引脚满了，
-				//报错，
-			//否则，
-				//加入该引脚，该元件的引脚和与之相连的导线信息都将更新
+		else//其他元件	TODO：加上电源的考虑
+		{
+			Node* new_elem = new ElemNode();
+			key_points.push_back(new_elem);
+			new_elem->m_id = cur_code++;
+			new_elem->m_type = ELEM;
+			switch (target->type)
+			{
+			case TYPE_RES:
+				((ElemNode*)new_elem)->elem_type = RES;
+				break;
+			case TYPE_VOL:
+				((ElemNode*)new_elem)->elem_type = VOL;
+				break;
+			case TYPE_CUR:
+				((ElemNode*)new_elem)->elem_type = CUR;
+				break;
+			case TYPE_LGT:
+				((ElemNode*)new_elem)->elem_type = LGT;
+				break;
+			default:
+				assert(0);
+			}
+			for (map<pair<Part*, int>, Dot>::iterator it = target->temp_pin.begin(); it != target->temp_pin.end(); it++)
+			{
+				new_elem->m_neighbors.push_back(it->first.second);
+				new_elem->num_of_neigh++;
+				if ((target->type == TYPE_RES && new_elem->num_of_neigh > 3) || (target->type != TYPE_RES && new_elem->num_of_neigh > 2))//如果引脚满了，
+					assert(0);
+				target->pin_point.push_back(it->second);
+			}
+			target->temp_pin.clear();
+			target->elem_node[0] = (ElemNode*)new_elem;
+		}
 		//把该笔画所有的点相邻区域的点加入到所有点阵哈希表并映射到相应part
-		for(int s=0;s<target->strokes.size();s++)
+		for (int s = 0; s < target->strokes.size(); s++)
 			for (int i = 0; i < target->strokes[s]->dots.size(); i++)
 				for (int j = target->strokes[s]->dots[i].first - RADIUS; j <= target->strokes[s]->dots[i].first + RADIUS; j++)
 					for (int k = target->strokes[s]->dots[i].second - RADIUS; k <= target->strokes[s]->dots[i].second + RADIUS; k++)
@@ -348,10 +428,9 @@ void CCircuitPainterView::classification()
 							all_point_table[j][k] = make_pair(part, stroke->dots[i]);
 							pDC->SetPixel(j, k, RGB(0, 0, 255));
 						}
+		//break;
 	}
 }
-
-
 
 void CCircuitPainterView::OnLButtonDown(UINT nFlags, CPoint point)
 {
@@ -382,7 +461,7 @@ void CCircuitPainterView::OnLButtonDown(UINT nFlags, CPoint point)
 
 	//在关键点表中查找该点，如果查到，则加入到该元件（此时该元件还未分类）临时节点空间中，等待识别之后处理
 	if (key_point_table[point.x][point.y].first != NULL)
-		part->temp_pin.insert(key_point_table[point.x][point.y]);
+		part->temp_pin.insert(make_pair(key_point_table[point.x][point.y], make_pair(point.x, point.y)));
 	cur_point = point;
 	last_point = point;
 	CView::OnLButtonDown(nFlags, point);
@@ -404,7 +483,7 @@ void CCircuitPainterView::OnMouseMove(UINT nFlags, CPoint point)
 		Invalidate(false);
 		//在关键点表中查找该点，如果查到，则加入到该元件（此时该元件还未分类）临时节点空间中，等待识别之后处理
 		if (key_point_table[point.x][point.y].first != NULL)
-			part->temp_pin.insert(key_point_table[point.x][point.y]);
+			part->temp_pin.insert(make_pair(key_point_table[point.x][point.y], make_pair(point.x, point.y)));
 		last_point = point;
 	}
 	CView::OnMouseMove(nFlags, point);
@@ -417,7 +496,7 @@ void CCircuitPainterView::OnLButtonUp(UINT nFlags, CPoint point)
 	mouseDown = false;
 	//在关键点表中查找该点，如果查到，则加入到该元件（此时该元件还未分类）临时节点空间中，等待识别之后处理
 	if (key_point_table[point.x][point.y].first != NULL)
-		part->temp_pin.insert(key_point_table[point.x][point.y]);
+		part->temp_pin.insert(make_pair(key_point_table[point.x][point.y], make_pair(point.x, point.y)));
 	endTime = clock();
 	CView::OnLButtonUp(nFlags, point);
 }

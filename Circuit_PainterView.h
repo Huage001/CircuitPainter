@@ -46,7 +46,7 @@ protected:
 	afx_msg void OnContextMenu(CWnd* pWnd, CPoint point);
 	DECLARE_MESSAGE_MAP()
 public:
-	afx_msg void classification();
+	void classification();
 	afx_msg bool SameArea(Dot a, Dot b);
 	void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
@@ -61,7 +61,7 @@ public:
 	CFont font;
 	Circuit* circuit;
 	vector<string> res;
-	vector<Dot> key_point;
+	vector<Node*> key_points;
 	pair<Part*,int>** key_point_table;
 	pair<Part*, Dot>** all_point_table;
 	queue<Part*> recognize_queue;
