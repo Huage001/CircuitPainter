@@ -20,6 +20,14 @@ SrcNode::SrcNode(bool isPos)
 	m_pos = isPos;
 }
 
+SrcNode::SrcNode(Node* node,bool isPos)
+{
+	m_id = node->m_id;
+	m_neighbors = node->m_neighbors;
+	m_type = SRC;
+	m_pos = isPos;
+}
+
 ElemNode::ElemNode()
 {
 	m_type = ELEM;

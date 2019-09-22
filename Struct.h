@@ -34,6 +34,7 @@ public:
 	bool m_pos;
 	double m_volt;
 	SrcNode(bool isPos);
+	SrcNode(Node* node,bool isPos);
 };
 
 class ElemNode :public Node

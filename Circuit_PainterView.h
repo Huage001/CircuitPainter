@@ -4,8 +4,6 @@
 
 #pragma once
 #include "Circuit.h"
-#include<queue>
-using namespace std;
 
 class CCircuitPainterView : public CView
 {
@@ -47,7 +45,6 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	void classification();
-	afx_msg bool SameArea(Dot a, Dot b);
 	void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
@@ -64,10 +61,10 @@ public:
 	vector<Node*> key_points;
 	pair<Part*,int>** key_point_table;
 	pair<Part*, Dot>** all_point_table;
-	queue<Part*> recognize_queue;
-	int iScrWidth, iScrHeight, cur_code;
+	int iScrWidth, iScrHeight, cur_code, timer_id;
 	afx_msg void OnMButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnStartCalculate();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };
 
 #ifndef _DEBUG  // Circuit_PainterView.cpp 中的调试版本
