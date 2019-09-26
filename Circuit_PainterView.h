@@ -4,6 +4,7 @@
 
 #pragma once
 #include "Circuit.h"
+#include <Python.h>
 
 class CCircuitPainterView : public CView
 {
@@ -62,9 +63,12 @@ public:
 	pair<Part*,int>** key_point_table;
 	pair<Part*, Dot>** all_point_table;
 	int iScrWidth, iScrHeight, cur_code, timer_id;
+	PyObject* pModule;
+	PyObject* pFunc;
 	afx_msg void OnMButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnStartCalculate();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg int tensorflow(Part* part);
 };
 
 #ifndef _DEBUG  // Circuit_PainterView.cpp 中的调试版本

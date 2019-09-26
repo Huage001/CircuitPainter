@@ -8,8 +8,6 @@
 #include<cmath>
 using namespace std;
 
-const double INF = 99999999, MIN = 1e-6;
-
 Circuit::Circuit(Graph* gph)
 {
 	num_of_node = gph->max_id + 1;
@@ -75,6 +73,30 @@ Circuit::Circuit(Graph* gph)
 			m_nodes[(*it)->elem_node[0]->out]->m_neighbors.push_back((*it)->elem_node[0]->m_id);
 		}
 	}
+	for (int i = 0; i < num_of_node; i++)
+		for (int j = 0; j < m_nodes[i]->num_of_neigh; j++)
+		{
+			Edge* edge = new Edge(i, m_nodes[i]->m_neighbors[j]);
+			m_edges[make_pair(i, m_nodes[i]->m_neighbors[j])] = edge;
+			m_edges[make_pair(m_nodes[i]->m_neighbors[j], i)] = edge;
+		}
+}
+
+Circuit::Circuit(vector<Node*> nodes)
+{
+	m_nodes = nodes;
+	num_of_node = nodes.size();
+	for (int i = 0; i < num_of_node; i++)
+		if (m_nodes[i]->m_type == TYPE_SOURCE)
+			if (((SrcNode*)m_nodes[i])->m_pos)
+				m_src_p = (SrcNode*)m_nodes[i];
+			else
+				m_src_n = (SrcNode*)m_nodes[i];
+		else if (m_nodes[i]->m_type != TYPE_WIRE)
+		{
+			((ElemNode*)m_nodes[i])->in = m_nodes[i]->m_neighbors[0];
+			((ElemNode*)m_nodes[i])->out = m_nodes[i]->m_neighbors[1];
+		}
 	for (int i = 0; i < num_of_node; i++)
 		for (int j = 0; j < m_nodes[i]->num_of_neigh; j++)
 		{
@@ -199,6 +221,13 @@ vector<string> Circuit::calculate(vector<vector<int>>& routes)
 			solution[i] = 0;
 		output[i] = sign[i] + ":" + to_string(solution[i]);
 	}
+	for (int i = 0; i < num_of_node; i++)
+		if (m_nodes[i]->m_type == ELEM)
+		{
+			int vol_idx = elem_volt_to_idx[i], cur_idx = elem_cur_to_idx[i];
+			((ElemNode*)m_nodes[i])->m_volt = solution[vol_idx];
+			((ElemNode*)m_nodes[i])->m_cur = solution[cur_idx];
+		}
 	delete[]matrix;
 	delete[]result;
 	return output;

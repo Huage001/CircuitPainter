@@ -5,14 +5,14 @@
 #include<map>
 using namespace std;
 
-#define TYPE_NULL 0
+#define TYPE_NULL 6
 #define TYPE_SOURCE 1
-#define TYPE_RES 2
-#define TYPE_CUR 3
-#define TYPE_VOL 4
-#define TYPE_SLD 5
-#define TYPE_LGT 6
-#define TYPE_WIRE 7
+#define TYPE_RES 3
+#define TYPE_CUR 4
+#define TYPE_VOL 5
+#define TYPE_LGT 2
+#define TYPE_WIRE 0
+#define TYPE_SLD 7
 
 enum NodeType { NODE, SRC, ELEM, SLD };
 
@@ -71,10 +71,10 @@ public:
 	union
 	{
 		ElemNode* elem_node[2];
-		int ports[2];
+		long long ports[2];
 		SrcNode* src_node[2];
 	};
-	vector<Dot> pin_point;
+	vector<pair<Dot,int>> pin_point;
 	Part();
 };
 

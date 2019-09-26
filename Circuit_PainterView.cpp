@@ -20,15 +20,19 @@
 #include <cstdlib>
 #include <sstream>
 #include <cmath>
+#include <Python.h>
 using namespace std;
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
-#define MAX_TIMEVAL 1.0
+#define MAX_TIMEVAL 0.75
 #define RADIUS 5
 #define FONT_SIZE 20
+
+CString name[] = { L"导线",L"电源",L"灯泡",L"电阻",L"电流表",L"电压表" };
+COLORREF color[] = { RGB(0,0,0),RGB(0,0,255),RGB(255,255,0),RGB(255,100,100),RGB(255,0,255),RGB(0,255,255) };
 
 // CCircuitPainterView
 
@@ -55,6 +59,19 @@ END_MESSAGE_MAP()
 CCircuitPainterView::CCircuitPainterView() noexcept
 {
 	// TODO: 在此处添加构造代码
+	Py_SetPythonHome(L"D:\\software\\tensorflow");
+	Py_Initialize();
+	PyRun_SimpleString("import sys");
+	PyRun_SimpleString("sys.path.append('./')");
+	PyRun_SimpleString("import numpy as np");
+	PyRun_SimpleString("import matplotlib.pyplot as plt");
+	PyRun_SimpleString("import tensorflow as tf");
+	PyRun_SimpleString("from PIL import Image, ImageFilter");
+	pModule = NULL;
+	pFunc = NULL;
+	pModule = PyImport_ImportModule("classification");
+	pFunc = PyObject_GetAttrString(pModule, "classification");
+
 	mouseDown = false;
 	stroke = NULL;
 	part = NULL;
@@ -90,6 +107,7 @@ CCircuitPainterView::CCircuitPainterView() noexcept
 
 CCircuitPainterView::~CCircuitPainterView()
 {
+	Py_Finalize();
 }
 
 BOOL CCircuitPainterView::PreCreateWindow(CREATESTRUCT& cs)
@@ -99,6 +117,7 @@ BOOL CCircuitPainterView::PreCreateWindow(CREATESTRUCT& cs)
 
 	return CView::PreCreateWindow(cs);
 }
+
 
 // CCircuitPainterView 绘图
 
@@ -123,25 +142,60 @@ void CCircuitPainterView::OnDraw(CDC* pDC)
 			pDC->LineTo(stroke->dots[n - 1].first, stroke->dots[n - 1].second);
 		}
 	}
-	if (newPart)
-	{
-		CString temp_str;
-		temp_str.Format(_T("元件%d"), pDoc->graph->all_parts.size());
-		pDC->SelectObject(&font);
-		pDC->SetBkColor(RGB(200, 200, 200));
-		pDC->SetTextColor(RGB(r, g, b));
-		pDC->TextOut(30, pDoc->graph->all_parts.size() * FONT_SIZE, temp_str);
-	}
 	if (have_res)
 	{
+		CString temp_str;
+
 		pDC->SelectObject(&font);
 		pDC->SetBkColor(RGB(0, 0, 0));
 		pDC->SetTextColor(RGB(255, 255, 255));
+
 		for (int i = 0; i < res.size(); i++)
 		{
-			CString temp_str(res[i].c_str());
+			temp_str=res[i].c_str();
 			pDC->TextOut(30, 325 + i * FONT_SIZE, temp_str);
 		}
+
+		int index = 0;
+		for (vector<Part*>::iterator it = pDoc->graph->all_parts.begin(); it != pDoc->graph->all_parts.end(); it++)
+			if ((*it)->type == TYPE_RES && (*it)->pin_point.size() > 2)
+			{
+				Node* nodes[3], *report;
+				for (int i = 0; i < 3; i++)
+				{
+					nodes[i] = key_points[(*it)->pin_point[i].second];
+					if (nodes[i]->num_of_neigh == 2)
+					{
+						if (key_points[nodes[i]->m_neighbors[0]]->m_type == ELEM)
+							report = key_points[nodes[i]->m_neighbors[0]];
+						else if (key_points[nodes[i]->m_neighbors[1]]->m_type == ELEM)
+							report = key_points[nodes[i]->m_neighbors[1]];
+						else
+							assert(0);
+						temp_str.Format(L"%s电流：%.2lfA", name[(*it)->type], ((ElemNode*)report)->m_cur);
+						pDC->TextOut((*it)->pin_point[i].first.first, (*it)->pin_point[i].first.second - 50, temp_str);
+						temp_str.Format(L"%s电压：%.2lfV", name[(*it)->type], ((ElemNode*)report)->m_volt);
+						pDC->TextOut((*it)->pin_point[i].first.first, (*it)->pin_point[i].first.second - 30, temp_str);
+					}
+				}
+			}
+			else if ((*it)->type == TYPE_LGT || (*it)->type == TYPE_RES)
+			{
+				temp_str.Format(L"%s电流：%.2lfA", name[(*it)->type], (*it)->elem_node[0]->m_cur);
+				pDC->TextOut((*it)->pin_point[0].first.first, (*it)->pin_point[0].first.second - 50, temp_str);
+				temp_str.Format(L"%s电压：%.2lfV", name[(*it)->type], (*it)->elem_node[0]->m_volt);
+				pDC->TextOut((*it)->pin_point[0].first.first, (*it)->pin_point[0].first.second - 30, temp_str);
+			}
+			else if ((*it)->type == TYPE_CUR)
+			{
+				temp_str.Format(L"%s电流：%.2lfA", name[(*it)->type], (*it)->elem_node[0]->m_cur);
+				pDC->TextOut((*it)->pin_point[0].first.first, (*it)->pin_point[0].first.second - 50, temp_str);
+			}
+			else if ((*it)->type == TYPE_VOL)
+			{
+				temp_str.Format(L"%s电压：%.2lfV", name[(*it)->type], (*it)->elem_node[0]->m_volt);
+				pDC->TextOut((*it)->pin_point[0].first.first, (*it)->pin_point[0].first.second - 30, temp_str);
+			}
 	}
 }
 
@@ -209,17 +263,46 @@ CCircuitPainterDoc* CCircuitPainterView::GetDocument() const // 非调试版本�
 
 // CCircuitPainterView 消息处理程序
 
-int test_elem[] = { TYPE_SOURCE,TYPE_WIRE,TYPE_LGT,TYPE_WIRE,TYPE_WIRE,TYPE_RES,TYPE_RES,TYPE_WIRE,TYPE_WIRE };
-int cnt = 0;
+int CCircuitPainterView::tensorflow(Part* part)
+{
+	PyObject* pArgs = PyTuple_New(2);
+	PyObject *pListx = PyList_New(part->strokes.size()), *pListy = PyList_New(part->strokes.size());
+	for (int i = 0; i < part->strokes.size(); i++)
+	{
+		PyObject* pListxi = PyList_New(part->strokes[i]->dots.size()), * pListyi = PyList_New(part->strokes[i]->dots.size());
+		for (int j = 0; j < part->strokes[i]->dots.size(); j++)
+		{
+			PyList_SetItem(pListxi, j, Py_BuildValue("i", part->strokes[i]->dots[j].first));
+			PyList_SetItem(pListyi, j, Py_BuildValue("i", part->strokes[i]->dots[j].second));
+		}
+		PyList_SetItem(pListx, i, pListxi);
+		PyList_SetItem(pListy, i, pListyi);
+	}
+	PyTuple_SetItem(pArgs, 0, pListx);
+	PyTuple_SetItem(pArgs, 1, pListy);
+	PyObject* pReturn = PyEval_CallObject(pFunc, pArgs);
+	int  nResult;
+	PyArg_Parse(pReturn, "i", &nResult);
+	return nResult;
+}
+
 //TODO：分类线程
 void CCircuitPainterView::classification()
 {
-	//while (recognize_queue.empty());	//while(工作队列为空);
 	Part* target = part;	//取队首part
-	//TODO: 开启tensorflow识别	target->type=tensorflow();	
-	target->type = test_elem[cnt++];
+	target->type=tensorflow(part);
+	if (target->type == TYPE_SOURCE && target->strokes.size() < 2)
+		target->type = TYPE_WIRE;
+
 	CDC* pDC = GetDC();
 	CCircuitPainterDoc* pDoc = GetDocument();
+	CString temp_str;
+	temp_str.Format(name[target->type]);
+	pDC->SelectObject(&font);
+	pDC->SetBkColor(RGB(200, 200, 200));
+	pDC->SetTextColor(RGB(r, g, b));
+	pDC->TextOut(30, pDoc->graph->all_parts.size() * FONT_SIZE, temp_str);
+
 	if (target->type == TYPE_WIRE)//如果返回的是导线，
 	{
 		//其实都不用这么麻烦，下一步改进时可以考虑多种等价情况，把导线中间点也结合到端点上
@@ -304,11 +387,13 @@ void CCircuitPainterView::classification()
 					{
 						new_node = new SrcNode(true);
 						connect->src_node[0] = (SrcNode*)new_node;
+						((SrcNode*)new_node)->m_volt = 6;//水
 					}
 					else if (connect->ports[1] == -1)
 					{
 						new_node = new SrcNode(false);
 						connect->src_node[1] = (SrcNode*)new_node;
+						((SrcNode*)new_node)->m_volt = 6;//水
 					}
 					else
 						assert(0);
@@ -316,6 +401,7 @@ void CCircuitPainterView::classification()
 					new_node->m_type = SRC;
 					new_node->num_of_neigh = 1;
 					new_node->m_neighbors.push_back(-1);
+					
 					unknown[index].first = cur_code;
 					unknown[!index].second = cur_code;
 
@@ -331,7 +417,7 @@ void CCircuitPainterView::classification()
 				}
 				else//否则（对方不是导线也不是电源）
 				{
-					if ((connect->type == TYPE_RES && connect->elem_node[0]->num_of_neigh > 3) || (connect->type != TYPE_RES && connect->elem_node[0]->num_of_neigh > 2))//如果对方的引脚满了，
+					if ((connect->type == TYPE_RES && connect->pin_point.size() >= 3) || (connect->type != TYPE_RES && connect->pin_point.size() >= 2))//如果对方的引脚满了，
 						assert(0);
 					else//否则，加入该引脚，更新对方的引脚信息和这条导线的信息
 					{
@@ -348,15 +434,91 @@ void CCircuitPainterView::classification()
 						//处理新关键点
 						Node* new_node = new Node(cur_code);
 						new_node->m_type = NODE;
-						new_node->num_of_neigh = 2;
-						new_node->m_neighbors.push_back(connect->elem_node[0]->m_id);//TODO：想想变阻器该咋办
-						new_node->m_neighbors.push_back(-1);
-						unknown[index].first = cur_code;
-						unknown[!index].second = cur_code;
-						connect->elem_node[0]->m_neighbors.push_back(cur_code);
-						connect->elem_node[0]->num_of_neigh++;
-						connect->pin_point.push_back(start_end[index]);
-						key_points.push_back(new_node);
+						int code_offset = 1;
+
+						if (connect->type == TYPE_RES && connect->pin_point.size() == 2)//变阻器
+						{
+							connect->pin_point.push_back(make_pair(start_end[index], cur_code));
+							
+							int dis1 = pow((connect->pin_point[0].first.first - connect->pin_point[1].first.first), 2) + pow((connect->pin_point[0].first.second - connect->pin_point[1].first.second), 2);
+							int dis2 = pow((connect->pin_point[0].first.first - connect->pin_point[2].first.first), 2) + pow((connect->pin_point[0].first.second - connect->pin_point[2].first.second), 2);
+							int dis3 = pow((connect->pin_point[1].first.first - connect->pin_point[2].first.first), 2) + pow((connect->pin_point[1].first.second - connect->pin_point[2].first.second), 2);
+							
+							Node* old_elem = connect->elem_node[0], * new_elem = new ElemNode(), * middle_node, * left_node, * right_node;
+							key_points.push_back(new_node);
+							key_points.push_back(new_elem);
+							new_elem->m_id = cur_code + code_offset;
+							code_offset++;
+							new_elem->m_type = ELEM;
+							new_elem->num_of_neigh = 2;
+							((ElemNode*)new_elem)->m_res = 1;//水
+							((ElemNode*)new_elem)->elem_type = RES;
+							((ElemNode*)old_elem)->m_res = 1;//水
+
+							if (dis1 >= dis2 && dis1 >= dis3)
+							{
+								left_node = key_points[old_elem->m_neighbors[0]];
+								right_node = key_points[old_elem->m_neighbors[1]];
+								middle_node = new_node;
+
+								if (right_node->m_neighbors[0] == old_elem->m_id)
+									right_node->m_neighbors[0] = new_elem->m_id;
+								else if (right_node->m_neighbors[1] == old_elem->m_id)
+									right_node->m_neighbors[1] = new_elem->m_id;
+								else
+									assert(0);
+
+								new_node->num_of_neigh = 3;
+								new_node->m_neighbors.push_back(old_elem->m_id);
+								new_node->m_neighbors.push_back(new_elem->m_id);
+								new_node->m_neighbors.push_back(-1);
+							}
+							else
+							{
+								if (dis2 > dis1 && dis2 > dis3)
+								{
+									left_node = key_points[connect->pin_point[0].second];
+									middle_node = key_points[connect->pin_point[1].second];
+								}
+								else
+								{
+									left_node = key_points[connect->pin_point[1].second];
+									middle_node = key_points[connect->pin_point[0].second];
+								}
+								right_node = new_node;
+								middle_node->num_of_neigh++;
+								middle_node->m_neighbors.push_back(new_elem->m_id);
+
+								new_node->num_of_neigh = 2;
+								new_node->m_neighbors.push_back(new_elem->m_id);
+								new_node->m_neighbors.push_back(-1);
+							}
+
+							if (old_elem->m_neighbors[0] == left_node->m_id)
+								old_elem->m_neighbors[1] = middle_node->m_id;
+							else if (old_elem->m_neighbors[1] == left_node->m_id)
+								old_elem->m_neighbors[0] = middle_node->m_id;
+							else
+								assert(0);
+
+							new_elem->m_neighbors.push_back(middle_node->m_id);
+							new_elem->m_neighbors.push_back(right_node->m_id);
+
+							unknown[index].first = cur_code;
+							unknown[!index].second = cur_code;
+						}
+						else
+						{
+							new_node->num_of_neigh = 2;
+							new_node->m_neighbors.push_back(connect->elem_node[0]->m_id);
+							new_node->m_neighbors.push_back(-1);
+							unknown[index].first = cur_code;
+							unknown[!index].second = cur_code;
+							connect->elem_node[0]->m_neighbors.push_back(cur_code);
+							connect->elem_node[0]->num_of_neigh++;
+							connect->pin_point.push_back(make_pair(start_end[index], cur_code));
+							key_points.push_back(new_node);
+						}
 
 						if (target->ports[0] == -1)
 							target->ports[0] = cur_code;
@@ -365,7 +527,7 @@ void CCircuitPainterView::classification()
 						else
 							assert(0);
 
-						cur_code++;
+						cur_code += code_offset;
 					}
 				}
 			}
@@ -414,6 +576,18 @@ void CCircuitPainterView::classification()
 			key_points[it->first.second]->m_neighbors.push_back(unknown[1].first);
 		}
 		target->temp_pin.clear();
+		if (target->ports[0] == -1)
+			if (target->ports[1] == unknown[0].second)
+				target->ports[0] = unknown[1].second;
+			else if (target->ports[1] == unknown[1].second)
+				target->ports[0] = unknown[0].second;
+			else
+				assert(0);
+		else if (target->ports[1] == -1)
+			if (target->ports[0] == unknown[0].second)
+				target->ports[1] = unknown[1].second;
+			else if (target->ports[0] == unknown[1].second)
+				target->ports[1] = unknown[0].second;
 		key_points[unknown[0].first]->m_neighbors.back() = unknown[0].second;
 		key_points[unknown[1].first]->m_neighbors.back() = unknown[1].second;
 	}
@@ -425,15 +599,18 @@ void CCircuitPainterView::classification()
 			if (it->first.first->ports[0] == -1)
 			{
 				src_node = new SrcNode(key_points[it->first.second], true);
+				((SrcNode*)src_node)->m_volt = 6;//水
 				target->src_node[0] = (SrcNode*)src_node;
 			}
 			else if (it->first.first->ports[1] == -1)
 			{
 				src_node = new SrcNode(key_points[it->first.second], false);
+				((SrcNode*)src_node)->m_volt = 6;//水
 				target->src_node[1] = (SrcNode*)src_node;
 			}
 			else
 				assert(0);
+			
 			delete key_points[it->first.second];
 			key_points[it->first.second] = src_node;
 		}
@@ -443,37 +620,94 @@ void CCircuitPainterView::classification()
 		Node* new_elem = new ElemNode();
 		key_points.push_back(new_elem);
 		new_elem->m_id = cur_code;
+		int code_offset = 1;
 		new_elem->m_type = ELEM;
 		switch (target->type)
 		{
 		case TYPE_RES:
 			((ElemNode*)new_elem)->elem_type = RES;
+			((ElemNode*)new_elem)->m_res = 2;//水
 			break;
 		case TYPE_VOL:
 			((ElemNode*)new_elem)->elem_type = VOL;
+			((ElemNode*)new_elem)->m_res = INF;
 			break;
 		case TYPE_CUR:
 			((ElemNode*)new_elem)->elem_type = CUR;
+			((ElemNode*)new_elem)->m_res = 0;
 			break;
 		case TYPE_LGT:
 			((ElemNode*)new_elem)->elem_type = LGT;
+			((ElemNode*)new_elem)->m_res = 2;//水
 			break;
 		default:
 			assert(0);
 		}
-		for (map<pair<Part*, int>, Dot>::iterator it = target->temp_pin.begin(); it != target->temp_pin.end(); it++)
+		if(target->temp_pin.size()<3)
+			for (map<pair<Part*, int>, Dot>::iterator it = target->temp_pin.begin(); it != target->temp_pin.end(); it++)
+			{
+				new_elem->m_neighbors.push_back(it->first.second);
+				new_elem->num_of_neigh++;
+				if ((target->type == TYPE_RES && target->pin_point.size() >= 3) || (target->type != TYPE_RES && target->pin_point.size() >= 2))//如果引脚满了，
+					assert(0);
+				target->pin_point.push_back(make_pair(it->second, it->first.second));
+				key_points[it->first.second]->m_neighbors.push_back(cur_code);
+				key_points[it->first.second]->num_of_neigh++;
+			}
+		else
 		{
-			new_elem->m_neighbors.push_back(it->first.second);
-			new_elem->num_of_neigh++;
-			if ((target->type == TYPE_RES && new_elem->num_of_neigh > 3) || (target->type != TYPE_RES && new_elem->num_of_neigh > 2))//如果引脚满了，
+			if (target->type != TYPE_RES || target->temp_pin.size() > 3)
 				assert(0);
-			target->pin_point.push_back(it->second);
-			key_points[it->first.second]->m_neighbors.push_back(cur_code);
-			key_points[it->first.second]->num_of_neigh++;
+			for (map<pair<Part*, int>, Dot>::iterator it = target->temp_pin.begin(); it != target->temp_pin.end(); it++)
+				target->pin_point.push_back(make_pair(it->second, it->first.second));
+			int dis1 = pow((target->pin_point[0].first.first - target->pin_point[1].first.first), 2) + pow((target->pin_point[0].first.second - target->pin_point[1].first.second), 2);
+			int dis2 = pow((target->pin_point[0].first.first - target->pin_point[2].first.first), 2) + pow((target->pin_point[0].first.second - target->pin_point[2].first.second), 2);
+			int dis3 = pow((target->pin_point[1].first.first - target->pin_point[2].first.first), 2) + pow((target->pin_point[1].first.second - target->pin_point[2].first.second), 2);
+			Node* new_new_elem = new ElemNode(), * left_node, * right_node, * middle_node;
+			if (dis1 > dis2 && dis1 > dis3)
+			{
+				left_node = key_points[0];
+				right_node = key_points[1];
+				middle_node = key_points[2];
+			}
+			else if (dis2 >= dis1 && dis2 >= dis3)
+			{
+				left_node = key_points[0];
+				right_node = key_points[2];
+				middle_node = key_points[1];
+			}
+			else
+			{
+				left_node = key_points[2];
+				right_node = key_points[1];
+				middle_node = key_points[0];
+			}
+			key_points.push_back(new_new_elem);
+			new_new_elem->m_id = cur_code + code_offset;
+			code_offset++;
+			new_new_elem->m_type = ELEM;
+			((ElemNode*)new_new_elem)->elem_type = RES;
+			((ElemNode*)new_new_elem)->m_res = 1;//水
+			new_new_elem->num_of_neigh = 2;
+			new_new_elem->m_neighbors.push_back(middle_node->m_id);
+			new_new_elem->m_neighbors.push_back(right_node->m_id);
+			((ElemNode*)new_elem)->m_res = 1;//水
+			new_elem->num_of_neigh = 2;
+			new_elem->m_neighbors.push_back(middle_node->m_id);
+			new_elem->m_neighbors.push_back(left_node->m_id);
+			left_node->num_of_neigh = 2;
+			left_node->m_neighbors.push_back(new_elem->m_id);
+			middle_node->num_of_neigh = 3;
+			middle_node->m_neighbors.push_back(new_elem->m_id);
+			middle_node->m_neighbors.push_back(new_new_elem->m_id);
+			right_node->num_of_neigh = 2;
+			right_node->m_neighbors.push_back(new_new_elem->m_id);
+			target->elem_node[1] = (ElemNode*)new_new_elem;
 		}
+
 		target->temp_pin.clear();
 		target->elem_node[0] = (ElemNode*)new_elem;
-		cur_code++;
+		cur_code+=code_offset;
 	}
 	//把该笔画所有的点相邻区域的点加入到所有点阵哈希表并映射到相应part
 	for (int s = 0; s < target->strokes.size(); s++)
@@ -483,7 +717,7 @@ void CCircuitPainterView::classification()
 					if (j >= 0 && j < iScrWidth && k >= 0 && k < iScrHeight)
 					{
 						all_point_table[j][k] = make_pair(part, target->strokes[s]->dots[i]);
-						pDC->SetPixel(j, k, RGB(0, 0, 255));
+						pDC->SetPixel(j, k, color[target->type]);
 					}
 	KillTimer(timer_id);
 }
@@ -687,8 +921,12 @@ void CCircuitPainterView::OnMButtonUp(UINT nFlags, CPoint point)
 void CCircuitPainterView::OnStartCalculate()
 {
 	// TODO: 在此添加命令处理程序代码
-	CCircuitPainterDoc* pDoc = GetDocument();
-	circuit = new Circuit(pDoc->graph);
+	//识别之前
+	//CCircuitPainterDoc* pDoc = GetDocument();
+	//circuit = new Circuit(pDoc->graph);
+
+	//识别之后
+	circuit = new Circuit(key_points);
 	vector<vector<int>>routes;
 	circuit->dfs(circuit->m_src_p->m_id, circuit->m_src_n->m_id, routes);
 	res = circuit->calculate(routes);

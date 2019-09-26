@@ -1,0 +1,2 @@
+model_checkpoint_path: "C:/Users/14117/source/repos/Circuit_Painter/Circuit_Painter/ClassificationModel_update.ckpt"
+all_model_checkpoint_paths: "C:/Users/14117/source/repos/Circuit_Painter/Circuit_Painter/ClassificationModel_update.ckpt"

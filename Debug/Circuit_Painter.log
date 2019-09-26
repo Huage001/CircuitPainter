@@ -1,8 +1,7 @@
 ﻿  Circuit_PainterView.cpp
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(140): warning C4018: “<”: 有符号/无符号不匹配
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(261): warning C4018: “<”: 有符号/无符号不匹配
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(479): warning C4018: “<”: 有符号/无符号不匹配
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(480): warning C4018: “<”: 有符号/无符号不匹配
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(557): warning C4244: “参数”: 从“double”转换到“UINT”，可能丢失数据
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(566): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(282): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(507): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(508): warning C4018: “<”: 有符号/无符号不匹配
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(588): warning C4244: “参数”: 从“double”转换到“UINT”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(597): warning C4018: “<”: 有符号/无符号不匹配
   Circuit_Painter.vcxproj -> C:\Users\14117\source\repos\Circuit_Painter\Debug\Circuit_Painter.exe
