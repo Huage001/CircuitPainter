@@ -55,6 +55,6 @@ def classification(x,y):
         x = graph.get_operation_by_name('x').outputs[0]
         y_ = sess.run(pred, feed_dict={x: im})
         ans=np.argmax(y_, axis=1)[0]
-        if (ans==3 or ans==1) and y_[0][ans]<0.85:
-            ans=0
+        # if (ans==3 or ans==1) and y_[0][ans]<0.85:
+        #     ans=0
         return ans

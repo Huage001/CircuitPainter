@@ -5,6 +5,8 @@
 #pragma once
 #include "Circuit.h"
 #include <Python.h>
+#include <unordered_map>
+using namespace std;
 
 class CCircuitPainterView : public CView
 {
@@ -60,8 +62,15 @@ public:
 	Circuit* circuit;
 	vector<string> res;
 	vector<Node*> key_points;
-	pair<Part*,int>** key_point_table;
-	pair<Part*, Dot>** all_point_table;
+	//pair<Part*,int>** key_point_table;
+	//pair<Part*, Dot>** all_point_table;
+	struct hash_key
+	{
+		//BKDRHash
+		size_t operator()(const Dot& s) const;
+	};
+	unordered_map<Dot, pair<Part*, int>, hash_key> key_point_table;
+	unordered_map<Dot, pair<Part*, Dot>, hash_key> all_point_table;
 	int iScrWidth, iScrHeight, cur_code, timer_id;
 	PyObject* pModule;
 	PyObject* pFunc;

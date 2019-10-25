@@ -1,22 +1,22 @@
 ﻿  Circuit_PainterView.cpp
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(137): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(304): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(337): warning C4244: “参数”: 从“__int64”转换到“const _Ty”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(139): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(306): warning C4267: “参数”: 从“size_t”转换到“int”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(348): warning C4244: “参数”: 从“__int64”转换到“const _Ty”，可能丢失数据
           with
           [
               _Ty=int
           ]
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(338): warning C4244: “参数”: 从“__int64”转换到“const _Ty”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(349): warning C4244: “参数”: 从“__int64”转换到“const _Ty”，可能丢失数据
           with
           [
               _Ty=int
           ]
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(443): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(444): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(445): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(663): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(664): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(665): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(791): warning C4244: “参数”: 从“double”转换到“UINT”，可能丢失数据
-C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(791): warning C4244: “=”: 从“UINT_PTR”转换到“int”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(457): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(458): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(459): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(680): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(681): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(682): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(819): warning C4244: “参数”: 从“double”转换到“UINT”，可能丢失数据
+C:\Users\14117\source\repos\Circuit_Painter\Circuit_Painter\Circuit_PainterView.cpp(819): warning C4244: “=”: 从“UINT_PTR”转换到“int”，可能丢失数据
   Circuit_Painter.vcxproj -> C:\Users\14117\source\repos\Circuit_Painter\x64\Debug\Circuit_Painter.exe

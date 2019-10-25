@@ -89,17 +89,19 @@ CCircuitPainterView::CCircuitPainterView() noexcept
 	//初始化像素表
 	//CDC* pDC = GetDC();
 	//HDC hdc = pDC->m_hDC;
+	iScrWidth = GetSystemMetrics(SM_CXSCREEN);
+	iScrHeight = GetSystemMetrics(SM_CYSCREEN);
 	//iScrWidth = GetDeviceCaps(hdc, HORZRES);
 	//iScrHeight = GetDeviceCaps(hdc, VERTRES);
-	iScrWidth = 1920;
-	iScrHeight = 1080;
-	key_point_table = new pair<Part*,int> *[iScrWidth];
-	all_point_table = new pair<Part*,Dot> *[iScrWidth];
-	for (int i = 0; i < iScrWidth; i++)
-	{
-		key_point_table[i] = new pair<Part*,int> [iScrHeight]();
-		all_point_table[i] = new pair<Part*,Dot>  [iScrHeight]();
-	}
+	//iScrWidth = 1920;
+	//iScrHeight = 1080;
+	//key_point_table = new pair<Part*, int>* [iScrWidth];
+	//all_point_table = new pair<Part*, Dot>* [iScrWidth];
+	//for (int i = 0; i < iScrWidth; i++)
+	//{
+	//	key_point_table[i] = new pair<Part*, int>[iScrHeight]();
+	//	all_point_table[i] = new pair<Part*, Dot>[iScrHeight]();
+	//}
 
 	//thread* classificator = new thread(&CCircuitPainterView::classification, NULL);
 	//CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)this->classification, NULL, 0, NULL);
@@ -160,21 +162,21 @@ void CCircuitPainterView::OnDraw(CDC* pDC)
 		for (vector<Part*>::iterator it = pDoc->graph->all_parts.begin(); it != pDoc->graph->all_parts.end(); it++)
 			if ((*it)->type == TYPE_RES && (*it)->pin_point.size() > 2)
 			{
-				Node* nodes[3], *report;
+				Node* nodes[3], *target;
 				for (int i = 0; i < 3; i++)
 				{
 					nodes[i] = key_points[(*it)->pin_point[i].second];
 					if (nodes[i]->num_of_neigh == 2)
 					{
 						if (key_points[nodes[i]->m_neighbors[0]]->m_type == ELEM)
-							report = key_points[nodes[i]->m_neighbors[0]];
+							target = key_points[nodes[i]->m_neighbors[0]];
 						else if (key_points[nodes[i]->m_neighbors[1]]->m_type == ELEM)
-							report = key_points[nodes[i]->m_neighbors[1]];
+							target = key_points[nodes[i]->m_neighbors[1]];
 						else
 							assert(0);
-						temp_str.Format(L"%s电流：%.2lfA", name[(*it)->type], ((ElemNode*)report)->m_cur);
+						temp_str.Format(L"%s电流：%.2lfA", name[(*it)->type], ((ElemNode*)target)->m_cur);
 						pDC->TextOut((*it)->pin_point[i].first.first, (*it)->pin_point[i].first.second - 50, temp_str);
-						temp_str.Format(L"%s电压：%.2lfV", name[(*it)->type], ((ElemNode*)report)->m_volt);
+						temp_str.Format(L"%s电压：%.2lfV", name[(*it)->type], ((ElemNode*)target)->m_volt);
 						pDC->TextOut((*it)->pin_point[i].first.first, (*it)->pin_point[i].first.second - 30, temp_str);
 					}
 				}
@@ -313,12 +315,20 @@ void CCircuitPainterView::classification()
 		start_end[1] = target->strokes.back()->dots.back();
 		for (int index = 0; index < 2; index++)
 		{
-			Part* connect = all_point_table[start_end[index].first][start_end[index].second].first;
+			Part* connect;
+			unordered_map<Dot, pair<Part*, Dot>, hash_key>::iterator all_search = all_point_table.find(make_pair(start_end[index].first, start_end[index].second));
+			if (all_search == all_point_table.end())
+				connect = NULL;
+			else
+				connect = all_search->second.first;
+			//Part* connect = all_point_table[start_end[index].first][start_end[index].second].first;
 			if (connect != NULL && connect != target)//在所有点表中查找该笔画起点与终点对应的part，如果找到，
 			{
 				if (connect->type == TYPE_WIRE)//如果对方也是导线，
 				{
-					if (key_point_table[start_end[index].first][start_end[index].second].first == NULL)//说明在关键点表中没有匹配到，需要新增关键点
+					unordered_map<Dot, pair<Part*, int>, hash_key>::iterator key_search = key_point_table.find(make_pair(start_end[index].first, start_end[index].second));
+					//if (key_point_table[start_end[index].first][start_end[index].second].first == NULL)//说明在关键点表中没有匹配到，需要新增关键点
+					if(key_search==key_point_table.end())
 					{
 
 						//新增关键点将它的相邻区域点加入到关键点表
@@ -326,7 +336,8 @@ void CCircuitPainterView::classification()
 							for (int k = start_end[index].second - 2*RADIUS; k <= start_end[index].second + 2*RADIUS; k++)
 								if (j >= 0 && j < iScrWidth && k >= 0 && k < iScrHeight)
 								{
-									key_point_table[j][k] = make_pair(target, cur_code);
+									//key_point_table[j][k] = make_pair(target, cur_code);
+									key_point_table.insert(make_pair(make_pair(j, k), make_pair(target, cur_code)));
 									pDC->SetPixel(j, k, RGB(255, 0, 0));
 								}
 
@@ -355,7 +366,8 @@ void CCircuitPainterView::classification()
 					}
 					else//说明和这条线的某个关键节点对上了
 					{
-						int interface_id = key_point_table[start_end[index].first][start_end[index].second].second;//和哪个关键节点对上了
+						//int interface_id = key_point_table[start_end[index].first][start_end[index].second].second;//和哪个关键节点对上了
+						int interface_id = key_search->second.second;
 						key_points[interface_id]->num_of_neigh++;
 						key_points[interface_id]->m_neighbors.push_back(-1);//同理具体和哪个点连着待定
 						unknown[index].first = interface_id;
@@ -377,7 +389,8 @@ void CCircuitPainterView::classification()
 						for (int k = start_end[index].second - 2 * RADIUS; k <= start_end[index].second + 2 * RADIUS; k++)
 							if (j >= 0 && j < iScrWidth && k >= 0 && k < iScrHeight)
 							{
-								key_point_table[j][k] = make_pair(target, cur_code);
+								//key_point_table[j][k] = make_pair(target, cur_code);
+								key_point_table.insert(make_pair(make_pair(j, k), make_pair(target, cur_code)));
 								pDC->SetPixel(j, k, RGB(255, 0, 0));
 							}
 
@@ -427,7 +440,8 @@ void CCircuitPainterView::classification()
 							for (int k = start_end[index].second - 2*RADIUS; k <= start_end[index].second + 2*RADIUS; k++)
 								if (j >= 0 && j < iScrWidth && k >= 0 && k < iScrHeight)
 								{
-									key_point_table[j][k] = make_pair(connect, cur_code);
+									//key_point_table[j][k] = make_pair(connect, cur_code);
+									key_point_table.insert(make_pair(make_pair(j, k), make_pair(connect, cur_code)));
 									pDC->SetPixel(j, k, RGB(255, 0, 0));
 								}
 
@@ -546,7 +560,8 @@ void CCircuitPainterView::classification()
 					for (int k = start_end[index].second - 2*RADIUS; k <= start_end[index].second + 2*RADIUS; k++)
 						if (j >= 0 && j < iScrWidth && k >= 0 && k < iScrHeight)
 						{
-							key_point_table[j][k] = make_pair(part, cur_code);
+							//key_point_table[j][k] = make_pair(part, cur_code);
+							key_point_table.insert(make_pair(make_pair(j, k), make_pair(target, cur_code)));
 							pDC->SetPixel(j, k, RGB(255, 0, 0));
 						}
 
@@ -564,7 +579,9 @@ void CCircuitPainterView::classification()
 		int middle_pin = -1;
 		for (map<pair<Part*, int>,Dot>::iterator it = target->temp_pin.begin(); it != target->temp_pin.end(); it++)
 		{
-			if (it->first.second == key_point_table[start_end[0].first][start_end[0].second].second || it->first.second == key_point_table[start_end[1].first][start_end[1].second].second)
+			unordered_map<Dot, pair<Part*, int>, hash_key>::iterator search1 = key_point_table.find(make_pair(start_end[0].first, start_end[0].second)), search2 = key_point_table.find(make_pair(start_end[1].first, start_end[1].second));
+			if ((search1!=key_point_table.end()&&it->first.second == search1->second.second) || (search2 != key_point_table.end() && it->first.second == search2->second.second))
+			//if (it->first.second == key_point_table[start_end[0].first][start_end[0].second].second || it->first.second == key_point_table[start_end[1].first][start_end[1].second].second)
 				continue;//说明关键点就是起点和终点，已经在上面处理过这种情况了，之后的情况都需要拆导线
 			if (middle_pin == -1)
 			{
@@ -596,13 +613,13 @@ void CCircuitPainterView::classification()
 		for (map<pair<Part*, int>, Dot>::iterator it = target->temp_pin.begin(); it != target->temp_pin.end(); it++)
 		{
 			Node* src_node;
-			if (it->first.first->ports[0] == -1)
+			if (key_points[it->first.first->ports[0]]->num_of_neigh > 1)
 			{
 				src_node = new SrcNode(key_points[it->first.second], true);
 				((SrcNode*)src_node)->m_volt = 6;//水
 				target->src_node[0] = (SrcNode*)src_node;
 			}
-			else if (it->first.first->ports[1] == -1)
+			else if (key_points[it->first.first->ports[1]]->num_of_neigh > 1)
 			{
 				src_node = new SrcNode(key_points[it->first.second], false);
 				((SrcNode*)src_node)->m_volt = 6;//水
@@ -716,7 +733,8 @@ void CCircuitPainterView::classification()
 				for (int k = target->strokes[s]->dots[i].second - RADIUS; k <= target->strokes[s]->dots[i].second + RADIUS; k++)
 					if (j >= 0 && j < iScrWidth && k >= 0 && k < iScrHeight)
 					{
-						all_point_table[j][k] = make_pair(part, target->strokes[s]->dots[i]);
+						//all_point_table[j][k] = make_pair(part, target->strokes[s]->dots[i]);
+						all_point_table.insert(make_pair(make_pair(j, k), make_pair(target, target->strokes[s]->dots[i])));
 						pDC->SetPixel(j, k, color[target->type]);
 					}
 	KillTimer(timer_id);
@@ -750,8 +768,12 @@ void CCircuitPainterView::OnLButtonDown(UINT nFlags, CPoint point)
 	part->strokes.push_back(stroke);
 
 	//在关键点表中查找该点，如果查到，则加入到该元件（此时该元件还未分类）临时节点空间中，等待识别之后处理
-	if (key_point_table[point.x][point.y].first != NULL)
-		part->temp_pin.insert(make_pair(key_point_table[point.x][point.y], make_pair(point.x, point.y)));
+
+	unordered_map<Dot, pair<Part*, int>, hash_key>::iterator key_search = key_point_table.find(make_pair(point.x, point.y));
+	//if (key_point_table[point.x][point.y].first != NULL)
+	if(key_search!=key_point_table.end())
+		//part->temp_pin.insert(make_pair(key_point_table[point.x][point.y], make_pair(point.x, point.y)));
+		part->temp_pin.insert(make_pair(key_search->second, make_pair(point.x, point.y)));
 	cur_point = point;
 	last_point = point;
 	CView::OnLButtonDown(nFlags, point);
@@ -772,8 +794,11 @@ void CCircuitPainterView::OnMouseMove(UINT nFlags, CPoint point)
 		cur_point = point;
 		Invalidate(false);
 		//在关键点表中查找该点，如果查到，则加入到该元件（此时该元件还未分类）临时节点空间中，等待识别之后处理
-		if (key_point_table[point.x][point.y].first != NULL)
-			part->temp_pin.insert(make_pair(key_point_table[point.x][point.y], make_pair(point.x, point.y)));
+		//if (key_point_table[point.x][point.y].first != NULL)
+		unordered_map<Dot, pair<Part*, int>, hash_key>::iterator key_search = key_point_table.find(make_pair(point.x, point.y));
+		if (key_search != key_point_table.end())
+			part->temp_pin.insert(make_pair(key_search->second, make_pair(point.x, point.y)));
+			//part->temp_pin.insert(make_pair(key_point_table[point.x][point.y], make_pair(point.x, point.y)));
 		last_point = point;
 	}
 	CView::OnMouseMove(nFlags, point);
@@ -785,8 +810,11 @@ void CCircuitPainterView::OnLButtonUp(UINT nFlags, CPoint point)
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	mouseDown = false;
 	//在关键点表中查找该点，如果查到，则加入到该元件（此时该元件还未分类）临时节点空间中，等待识别之后处理
-	if (key_point_table[point.x][point.y].first != NULL)
-		part->temp_pin.insert(make_pair(key_point_table[point.x][point.y], make_pair(point.x, point.y)));
+	//if (key_point_table[point.x][point.y].first != NULL)
+	//	part->temp_pin.insert(make_pair(key_point_table[point.x][point.y], make_pair(point.x, point.y)));
+	unordered_map<Dot, pair<Part*, int>, hash_key>::iterator key_search = key_point_table.find(make_pair(point.x, point.y));
+	if (key_search != key_point_table.end())
+		part->temp_pin.insert(make_pair(key_search->second, make_pair(point.x, point.y)));
 	endTime = clock();
 	timer_id = SetTimer(1, MAX_TIMEVAL * CLOCKS_PER_SEC, NULL);
 	CView::OnLButtonUp(nFlags, point);
@@ -941,4 +969,10 @@ void CCircuitPainterView::OnTimer(UINT_PTR nIDEvent)
 	if (nIDEvent == timer_id)
 		classification();
 	CView::OnTimer(nIDEvent);
+}
+
+size_t CCircuitPainterView::hash_key::operator()(const Dot& s) const
+{
+	int p = 100003;
+	return (s.first * 1920 + s.second) % p;
 }
