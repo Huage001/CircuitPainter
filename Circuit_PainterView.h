@@ -4,8 +4,9 @@
 
 #pragma once
 #include "Circuit.h"
+#include "Shape.h"
 #include <Python.h>
-#include <unordered_map>
+#include <map>
 using namespace std;
 
 class CCircuitPainterView : public CView
@@ -62,15 +63,8 @@ public:
 	Circuit* circuit;
 	vector<string> res;
 	vector<Node*> key_points;
-	//pair<Part*,int>** key_point_table;
-	//pair<Part*, Dot>** all_point_table;
-	struct hash_key
-	{
-		//BKDRHash
-		size_t operator()(const Dot& s) const;
-	};
-	unordered_map<Dot, pair<Part*, int>, hash_key> key_point_table;
-	unordered_map<Dot, pair<Part*, Dot>, hash_key> all_point_table;
+	map<Dot, pair<Part*, int>> key_point_table;
+	vector<pair<Shape*,Part*>> shape_table;
 	int iScrWidth, iScrHeight, cur_code, timer_id;
 	PyObject* pModule;
 	PyObject* pFunc;
@@ -78,6 +72,9 @@ public:
 	afx_msg void OnStartCalculate();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg int tensorflow(Part* part);
+	afx_msg void regulation(Part* part);
+	afx_msg bool check_gradient_line(Dot p1, Dot p2,Dot p3);
+	afx_msg Part* search_shape_table(Dot p);
 };
 
 #ifndef _DEBUG  // Circuit_PainterView.cpp 中的调试版本
